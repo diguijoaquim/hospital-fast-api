@@ -2,5 +2,6 @@ fastapi[all]
 groq
 SQLAlchemy
 jwt
+pyjwt
 python-jose
 pymysql
