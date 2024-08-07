@@ -181,3 +181,4 @@ class UserCreate(BaseModel):
     name: str
     contact: str
     password: str
+

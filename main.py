@@ -370,5 +370,4 @@ def dina(text_input: TextInput, db: Session = Depends(get_db)):
 # Rodar o servidor com Uvicorn
 if __name__ == "__main__":
     import uvicorn
-    create_base()  # Criar as tabelas
     uvicorn.run(app, host="192.168.1.62", port=8000)
