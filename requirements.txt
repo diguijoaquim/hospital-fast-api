@@ -3,3 +3,4 @@ groq
 SQLAlchemy
 jwt
 python-jose
+pymysql
