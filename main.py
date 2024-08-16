@@ -5,38 +5,16 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from jose import jwt
 import re
-from models.models import *  # Certifique-se de importar corretamente seus modelos e classes Pydantic
-from sqlalchemy import create_engine,or_
+from models.models import * 
 import uvicorn
 from sqlalchemy.orm import sessionmaker
-from controler import (
-    addFerias, getFerias, getLen, getEmployers, addTransferencia, addFalecido,
-    addReforma, addSuspenso, getSuspenso, getTransferencia, getReforma, getFalecido, getById
-)
+from controler import *
 import os
+
 
 from groq import Groq
 # Inicializar a aplicação FastAPI
 app = FastAPI()
-
-
-
-# Configurar a conexão com o banco de dados
-DATABASE_URI = os.getenv('CONNECT_SQL')
-engine = create_engine(DATABASE_URI, echo=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Criar as tabelas do banco de dados
-def create_base():
-    Base.metadata.create_all(bind=engine)
-
-# Dependência para obter a sessão do banco de dados
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # Configurações de segurança e criptografia
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -106,10 +84,6 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 def read_users_me(current_user: User = Depends(get_current_user)):
     return {"username": current_user.name, "contact": current_user.contact}
 
-
-
-
-
 @app.post("/users/")
 def add_user(user: UserCreate, db: Session = Depends(get_db)):
     validate_contact(user.contact)
@@ -149,33 +123,57 @@ def add_employer(employer: EmployerCreate, db: Session = Depends(get_db)):
     db.refresh(new_employer)
     return new_employer
 
+# Rotas FastAPI
 @app.post('/add_ferias')
-def feria(feria:FeriaModel):
-    f=addFerias(id=feria.funcionario_id)
-    return f
+def feria(feria: FeriaModel):
+    try:
+        f = addFerias(id=feria.funcionario_id, start=feria.data_inicio_ferias, end=feria.data_fim_ferias)
+        return f
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Erro ao adicionar férias: {e.detail}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
-#adicionar trasferido
-@app.post('/add_trasferencia')
-def trasferido(transferencia:TransferenciaModal):
-    f=addTransferencia(id=transferencia.funcionario_id)
-    return f
 
+@app.post('/add_transferencia')
+def trasferido(transferencia: TransferenciaModal):
+    try:
+        f = addTransferencia(id=transferencia.funcionario_id, start=transferencia.data_transferido, lugar=transferencia.lugar_transferido)
+        return f
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Erro ao adicionar trasferencia: {e.detail}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
 @app.post('/add_reforma')
-def reforma(reforma:ReformaModal):
-    r=addReforma(id=reforma.funcionario_id,data=reforma.data_reforma,idade=reforma.idade_reforma)
-    return r
+def reforma(reforma: ReformaModal):
+    try:
+        r = addReforma(id=reforma.funcionario_id, data=reforma.data_reforma, idade=reforma.idade_reforma)
+        return r
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Erro ao adicionar reforma: {e.detail}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
-#adicionar trasferido
 @app.post('/add_suspenso')
-def suspenso(suspenso:SuspensoModal):
-    s=addSuspenso(id=suspenso.funcionario_id,data=suspenso.data_suspenso,motivo=suspenso.motivo)
-    return s
+def suspenso(suspenso: SuspensoModal):
+    try:
+        s = addSuspenso(id=suspenso.funcionario_id, data=suspenso.data_suspenso, motivo=suspenso.motivo)
+        return s
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Erro ao adicionar suspenso: {e.detail}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
 
 @app.post('/add_falecido')
-def falecido(falecido:FalecidoModal):
-    return addFalecido(id=falecido.funcionario_id,data=falecido.data_falecimento,idade=falecido.idade)
-    
+def falecido(falecido: FalecidoModal):
+    try:
+        return addFalecido(id=falecido.funcionario_id, data=falecido.data_falecimento, idade=falecido.idade)
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Erro ao adicionar falecido: {e.detail}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
+
 @app.get('/trasferido')
 def get_trasferido():
     return getTransferencia()
@@ -189,9 +187,39 @@ def get_suspenso():
 def get_falecido():
     return getFalecido()
 
-@app.get('/ferias')
-def get_ferias():
-    return getFerias()
+@app.get('/ferias/')
+def get_ferias(search=""):
+    return getFerias(search)
+
+
+@app.get("/removido/")
+def remov(search: str = None, db: Session = Depends(get_db)):
+    return getEmployersRemovido()
+
+
+
+@app.get("/emp/transferidos")
+def tras(search: str = None, db: Session = Depends(get_db)):
+    return getEmployersTransferido()
+
+@app.get("/emp/licencas")
+def lice(search: str = None, db: Session = Depends(get_db)):
+    return getEmployersLICENCA(search)
+
+@app.get("/emp/suspensos")
+def susp(search: str = None, db: Session = Depends(get_db)):
+    return getEmployersSuspensed()
+
+
+
+
+@app.get("/emp/reformados")
+def refo(search: str = None, db: Session = Depends(get_db)):
+    return getEmployersReforma()
+
+@app.get("/emp/falecidos")
+def fal(search: str = None, db: Session = Depends(get_db)):
+    return getEmployersDeath()
 
 @app.get("/employers/")
 def funcionarios(search: str = None, db: Session = Depends(get_db)):
@@ -235,7 +263,9 @@ def read_employers_by_sector(sector: str, db: Session = Depends(get_db)):
     return db.query(Employer).filter(Employer.sector == sector).all()
 
 
-
+@app.get('/getbysearch/')
+def searcher(name:str,db: Session = Depends(get_db)):
+    return db.query(Employer).filter(Employer.nome.like(f'%{name}%')).all()
 
 @app.get("/employers/sectors")
 def read_employers_by_sectors():
@@ -273,6 +303,30 @@ def read_employers_by_year(year: int, db: Session = Depends(get_db)):
     return db.query(Employer).filter(Employer.ano_inicio == year).all()
 
 
+
+
+@app.put("/employer/{employer_id}")
+def update_employer(employer_id: int, employer_update: EmployerUpdate, db: Session = Depends(get_db)):
+    # Recupera o empregador com base no ID
+    employer = db.query(Employer).filter(Employer.id == employer_id).first()
+    
+    if not employer:
+        raise HTTPException(status_code=404, detail="Employer not found")
+    
+    # Atualiza os campos conforme fornecido no payload
+    update_data = employer_update.dict(exclude_unset=True)  # Exclui campos que não foram fornecidos
+    
+    for key, value in update_data.items():
+        setattr(employer, key, value)  # Define os novos valores
+    
+    db.commit()
+    db.refresh(employer)  # Atualiza o objeto com os dados mais recentes do banco
+    
+    return employer
+
+
+
+
 # Rota para deletar um funcionário
 @app.delete("/employers/{id_employer}")
 def delete_employer(id_employer: int, db: Session = Depends(get_db)):
@@ -284,8 +338,7 @@ def delete_employer(id_employer: int, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Employer status updated to 'Removido'"}
 
-
-client = Groq(api_key=os.getenv("groq_api_key"))
+client = Groq(api_key=os.getenv("API_KEY"))
 
 # Classe para a entrada de texto
 class TextInput(BaseModel):
@@ -311,7 +364,8 @@ def employer_to_dict(employer):
         "categoria": employer.categoria,
         "especialidade":employer.especialidade,
         "nuit":employer.nuit,
-        "faixa_etaria":employer.faixa_etaria
+        "faixa_etaria":employer.faixa_etaria,
+        "status":employer.status
 
     }
 
@@ -324,33 +378,14 @@ def dina(text_input: TextInput, db: Session = Depends(get_db)):
     
     # Converte os objetos Employer para um formato serializável
     treino_dina = f"""
-    OLa eu sou assistente IA criado e integrado no sistema de gestao de recursos humanos do hospital de lichinga, fui criada pela a BlueSpark
+    Ola eu sou assistente IA criado e integrado no sistema de gestao de recursos humanos do hospital de lichinga, fui criada pela a BlueSpark
     
+    {treino_ai}
     
     Dados do hospital:
     {[employer_to_dict(user) for user in users]}
 
-    ao mencionar dados nao posso retornar em json nao , deve ser dados claros, sempre ignorar o id do funcionario nao pode ser retornado
 
-    Criado pela Electro Gulamo , 
-    os principais programadores, Diqui Joaquim, Jorge Sebastiao , Zelote francisco e Alvarinho Luis, esses pertencen na equipe BlueSpark Da ElectroGulamo
-    
-    Hospital de lichinga:
-
-    Hospital Provincial de Lichinga: Informação Atualizada (8 de Julho de 2024)
-    O Hospital Provincial de Lichinga, na província de Niassa, Moçambique, foi recentemente inaugurado após extensas obras de reabilitação, ampliação e requalificação.
-    Serviços Disponíveis:
-    Serviços de Urgência: Atendimento médico imediato para casos graves.
-    Maternidade: Cuidados de saúde pré, durante e pós-parto para mães e recém-nascidos.
-    Bloco Operatório: Realização de cirurgias de diversas especialidades.
-    Consulta Externa: Consultas médicas em diversas áreas da medicina.
-    Fisioterapia: Reabilitação física para pacientes com diversos tipos de lesões.
-    Pediatria: Cuidados de saúde para crianças.
-    Tomografia TAC: Exames de imagem avançados para diagnóstico de doenças.
-    Produção e Canalização de Oxigénio: Garantia de oxigénio para pacientes que necessitem.
-    Outras Informações:
-
-    Localização: Lichinga, Niassa, Moçambique.
     """
 
     # Adiciona a mensagem do sistema ao histórico, se for a primeira interação
@@ -365,6 +400,10 @@ def dina(text_input: TextInput, db: Session = Depends(get_db)):
         model="llama3-70b-8192",
     )
     return response.choices[0].message.content
+
+
+
+
 
 
 # Rodar o servidor com Uvicorn

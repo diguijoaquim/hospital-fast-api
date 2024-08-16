@@ -42,8 +42,6 @@ class SuspensoModal(BaseModel):
     data_suspenso: datetime
     motivo:str
 
-
-
 # Modelo para Férias
 class Feria(Base):
     __tablename__ = "ferias"
@@ -169,6 +167,7 @@ class EmployerUpdate(BaseModel):
     data_aposentadoria: Optional[datetime]  # Para Aposentado
     data_falecimento: Optional[datetime]  # Para Falecido
     faixa_etaria:Optional[str]
+    status:Optional[str]
 
 class EmployerUpdateStatus(BaseModel):
     status: str  # Novo status do funcionário, por exemplo, "Transferido", "Despedido", "Falecido"
@@ -181,4 +180,6 @@ class UserCreate(BaseModel):
     name: str
     contact: str
     password: str
+
+
 
