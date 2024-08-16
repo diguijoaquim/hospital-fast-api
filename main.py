@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt
 import re
 from models.models import *  # Certifique-se de importar corretamente seus modelos e classes Pydantic
 from sqlalchemy import create_engine,or_
